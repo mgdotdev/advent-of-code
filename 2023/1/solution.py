@@ -15,84 +15,79 @@ NUMBERS = {v: v for v in MAPPING.values()}
 REVERSED = {k[::-1]: v for k, v in MAPPING.items()}
 
 
-class Node:
-    def __init__(self, mapping, key=None):
-        self.key = key
-        self.val = ""
-        letter_map = {}
-        for key, val in mapping.items():
-            if key == "":
-                self.val = val
-            else:
-                first, rest = key[0], key[1:]
-                letter_map.setdefault(first, {})[rest] = val
+def graph(mapping):
+    letter_map = {}
+    for key, val in mapping.items():
+        if not key:
+            return val
+        first, rest = key[0], key[1:]
+        letter_map.setdefault(first, {})[rest] = val
 
-        if not self.val:
-            self.items = {
-                k: Node(v, k) for k, v in letter_map.items()
-            }
+    return {
+        k: graph(v)
+        for k, v in letter_map.items()
+    }
 
-    def traverse(self, val):
-        if self.val:
-            return self.val
 
-        if not val:
+def traverse(line, graph, progress=""):
+    if not line:
+        return ""
+
+    key, rest = line[0], line[1:]
+    node = graph.get(key)
+
+    if node is None:
+        if progress:
             return ""
+        return traverse(rest, graph)
+    elif type(node) is str:
+        return node
 
-        key, rest = val[0], val[1:]
-        node = self.items.get(key)
+    result = traverse(rest, node, progress=progress+key)
+    if not result:
+        return traverse(rest, graph, progress=progress)
 
-        if node is None:
-            if self.key:
-                return ""
-            return self.traverse(rest)
-
-        traverse = node.traverse(rest)
-
-        if not traverse:
-            return self.traverse(rest)
-
-        return traverse
+    return result
 
 
 def part_one():
-    graph = Node(NUMBERS)
+    g = graph(NUMBERS)
 
     val = 0
     with open("./fixtures/data.txt") as f:
         data = f.read()
     for line in data.splitlines():
-        first = graph.traverse(line)
-        last = graph.traverse(line[::-1])
+        first = traverse(line, g)
+        last = traverse(line[::-1], g)
         val += int(first+last)
     return val
 
 
 def part_two():
-    first_graph = Node({**MAPPING, **NUMBERS})
-    last_graph = Node({**REVERSED, **NUMBERS})
+    forward = graph({**MAPPING, **NUMBERS})
+    backward = graph({**REVERSED, **NUMBERS})
 
     val = 0
     with open("./fixtures/data.txt") as f:
         data = f.read()
     for line in data.splitlines():
-        first = first_graph.traverse(line)
-        last = last_graph.traverse(line[::-1])
+        first = traverse(line, forward)
+        last = traverse(line[::-1], backward)
         val += int(first+last)
     return val
 
 
 def test():
-    first_graph = Node({**MAPPING, **NUMBERS})
-    last_graph = Node({**REVERSED, **NUMBERS})
+    forward = graph({**MAPPING, **NUMBERS})
+    backward = graph({**REVERSED, **NUMBERS})
     val = 0
 
     with open("./fixtures/test.txt") as f:
         data = f.read()
 
     for line in data.splitlines():
-        first = first_graph.traverse(line)
-        last = last_graph.traverse(line[::-1])
+        first = traverse(line, forward)
+        last = traverse(line[::-1], backward)
         val += int(first+last)
     return val
 
